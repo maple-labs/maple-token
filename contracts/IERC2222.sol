@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.11;
 
-interface IFDT {
+interface IERC2222 {
     /**
      * @dev Returns the total amount of funds a given address is able to withdraw currently.
      * @param owner Address of FDT holder

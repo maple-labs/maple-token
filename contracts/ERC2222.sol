@@ -4,15 +4,15 @@ pragma solidity 0.6.11;
 import "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "lib/openzeppelin-contracts/contracts/math/SafeMath.sol";
 import "lib/openzeppelin-contracts/contracts/math/SignedSafeMath.sol";
-import "./IFDT.sol";
-import "./math/SafeMathUint.sol";
-import "./math/SafeMathInt.sol";
+import "./IERC2222.sol";
+import "./math/UintSafeMath.sol";
+import "./math/IntSafeMath.sol";
 
-abstract contract FDT is IFDT, ERC20 {
+abstract contract ERC2222 is IERC2222, ERC20 {
     using SafeMath       for uint256;
-    using SafeMathUint   for uint256;
+    using UintSafeMath   for uint256;
     using SignedSafeMath for  int256;
-    using SafeMathInt    for  int256;
+    using IntSafeMath    for  int256;
 
     IERC20 public fundsToken;  // The fundsToken (dividends)
 
