@@ -1,0 +1,1 @@
+build :; DAPP_SRC=contracts dapp --use solc:0.6.11 build
