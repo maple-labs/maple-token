@@ -177,9 +177,11 @@ abstract contract ERC2222 is IERC2222, ERC20 {
     function withdrawFunds() public virtual override {
         uint256 withdrawableFunds = _prepareWithdraw();
 
-        require(fundsToken.transfer(msg.sender, withdrawableFunds), "FDT:TRANSFER_FAILED");
+        if (withdrawableFunds > uint256(0)) {
+            require(fundsToken.transfer(msg.sender, withdrawableFunds), "FDT:TRANSFER_FAILED");
 
-        _updateFundsTokenBalance();
+            _updateFundsTokenBalance();
+        }
     }
 
     /**
