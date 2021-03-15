@@ -4,12 +4,7 @@ pragma solidity 0.6.11;
 import "./ERC2222.sol";
 
 contract MapleToken is ERC2222 {
-
-    modifier onlyFundsToken () {
-        require(msg.sender == address(fundsToken), "MapleToken:UNAUTHORIZED_SENDER");
-        _;
-    }
-
+    
     /**
         @dev Instanties the MapleToken.
         @param  name       Name of the token.
