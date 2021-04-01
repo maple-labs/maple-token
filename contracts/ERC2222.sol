@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.11;
 
-import "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "lib/openzeppelin-contracts/contracts/token/ERC20/SafeERC20.sol";
 import "lib/openzeppelin-contracts/contracts/math/SafeMath.sol";
 import "lib/openzeppelin-contracts/contracts/math/SignedSafeMath.sol";
 import "./IERC2222.sol";
@@ -13,6 +13,7 @@ abstract contract ERC2222 is IERC2222, ERC20 {
     using UintSafeMath   for uint256;
     using SignedSafeMath for  int256;
     using IntSafeMath    for  int256;
+    using SafeERC20      for  IERC20;
 
     IERC20 public fundsToken;  // The fundsToken (dividends)
 
@@ -178,7 +179,7 @@ abstract contract ERC2222 is IERC2222, ERC20 {
         uint256 withdrawableFunds = _prepareWithdraw();
 
         if (withdrawableFunds > uint256(0)) {
-            require(fundsToken.transfer(msg.sender, withdrawableFunds), "FDT:TRANSFER_FAILED");
+            fundsToken.safeTransfer(msg.sender, withdrawableFunds);
 
             _updateFundsTokenBalance();
         }
@@ -190,9 +191,11 @@ abstract contract ERC2222 is IERC2222, ERC20 {
     function withdrawFundsOnBehalf(address user) public virtual {
         uint256 withdrawableFunds = _prepareWithdrawOnBehalf(user);
 
-        require(fundsToken.transfer(user, withdrawableFunds), "FDT:TRANSFER_FAILED");
+        if (withdrawableFunds > uint256(0)) {
+            fundsToken.safeTransfer(user, withdrawableFunds);
 
-        _updateFundsTokenBalance();
+            _updateFundsTokenBalance();
+        }
     }
 
     /**
@@ -210,7 +213,7 @@ abstract contract ERC2222 is IERC2222, ERC20 {
 
     /**
      * @dev Register a payment of funds in tokens. May be called directly after a deposit is made.
-     * @dev Calls _updateFundsTokenBalance(), whereby the contract computes the delta of the previous and the new
+     * @dev Calls _updateFundsTokenBalance(), whereby the contract computes the delta of the new and the previous
      * funds token balance and increments the total received funds (cumulative) by delta by calling _registerFunds()
      */
     function updateFundsReceived() public virtual {
