@@ -43,23 +43,23 @@ contract MapleToken is ERC2222 {
         @dev Approve by signature.
         @param owner    Owner address that signed the permit
         @param spender  Spender of the permit
-        @param value    Permit approval spend limit
+        @param amount   Permit approval spend limit
         @param deadline Deadline after which the permit is invalid
         @param v        ECDSA signature v component
         @param r        ECDSA signature r component
         @param s        ECDSA signature s component
     */
-    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+    function permit(address owner, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external {
         require(deadline >= block.timestamp, 'MapleToken:EXPIRED');
         bytes32 digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
                 DOMAIN_SEPARATOR,
-                keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner]++, deadline))
+                keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, amount, nonces[owner]++, deadline))
             )
         );
         address recoveredAddress = ecrecover(digest, v, r, s);
-        require(recoveredAddress != address(0) && recoveredAddress == owner, 'MapleToken:INVALID_SIGNATURE');
-        _approve(owner, spender, value);
+        require(recoveredAddress == owner, 'MapleToken:INVALID_SIGNATURE');
+        _approve(owner, spender, amount);
     }
 }
