@@ -73,9 +73,14 @@ contract MapleTokenTest is DSTest {
     }
 
     function test_permit_zero_address() public {
-        v = 0;
         uint256 amount = 10 * WAD;
         assertTrue(!usr.try_permit(address(0), bob, amount, uint(-1), v, r, s));
+    }
+
+    function test_permit_non_owner_address() public {
+        uint256 amount = 10 * WAD;
+        assertTrue(!usr.try_permit(bob, ali, amount, uint(-1), v,  r,  s));
+        assertTrue(!usr.try_permit(ali, bob, amount, uint(-1), v2, r2, s2));
     }
 
     function test_permit_with_expiry() public {
@@ -83,15 +88,15 @@ contract MapleTokenTest is DSTest {
         uint256 expiry = 482112000 + 1 hours;
 
         // Expired permit should fail
-        hevm.warp(482112000 + 2 hours);
-        assertEq(now, 482112000 + 2 hours);
+        hevm.warp(482112000 + 1 hours + 1);
+        assertEq(block.timestamp, 482112000 + 1 hours + 1);
         assertTrue(!usr.try_permit(ali, bob, amount, expiry, v2, r2, s2));
         assertEq(token.allowance(ali, bob), 0);
         assertEq(token.nonces(ali), 0);
 
         // Valid permit should succeed
         hevm.warp(482112000 + 1 hours);
-        assertEq(now, 482112000 + 1 hours);
+        assertEq(block.timestamp, 482112000 + 1 hours);
         assertTrue(usr.try_permit(ali, bob, amount, expiry, v2, r2, s2));
         assertEq(token.allowance(ali, bob), amount);
         assertEq(token.nonces(ali), 1);

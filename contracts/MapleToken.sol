@@ -36,7 +36,7 @@ contract MapleToken is ERC2222 {
         );
 
         require(address(fundsToken) != address(0), "MapleToken:INVALID_FUNDS_TOKEN");
-        _mint(msg.sender, 10000000 * (10 ** uint256(decimals())));
+        _mint(msg.sender, 10_000_000 * 10 ** 18);
     }
 
     /**
