@@ -132,6 +132,7 @@ abstract contract ERC2222 is IERC2222, ERC20 {
         address to,
         uint256 value
     ) internal virtual override {
+        require(to != address(this), "ERC20: transferring to token contract");
         super._transfer(from, to, value);
 
         int256 _magCorrection = pointsPerShare.mul(value).toInt256Safe();
