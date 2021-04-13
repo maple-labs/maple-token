@@ -32,12 +32,12 @@ contract MapleTokenTest is DSTest {
 
     address ali = 0x17ec8597ff92C3F44523bDc65BF0f1bE632917ff;
     address bob = 0x63FC2aD3d021a4D7e64323529a55a9442C444dA0;
-    uint8     v = 28;
-    bytes32   r = 0x1f51dadbe0df96581bacef94eadbe3053c79f784ab1737f5c6b33782b38cc723;
-    bytes32   s = 0x21f4cf40918bdee22ada50c05c7718855daa41c88aa24d8645c3f9d1ffd1d7bb;
-    uint8    v2 = 27;
-    bytes32  r2 = 0x5e56d6b03030ad9a3f8b50cc70f1ee488ec69b6939334baac6148837a7cc9b96;
-    bytes32  s2 = 0x4573435167adc2a7332a7aed96fce122e1baeda98518f1903832954ac68c6253;
+    uint8     v = 27;
+    bytes32   r = 0xd6ac3dffef695bb6035537394acd0294344798e77491a76b96a65fd4f7d32452;
+    bytes32   s = 0x6252eda670c17df6d66ecb195124c7b7aee51c15842ea9f2704cc5ba0846ad0f;
+    uint8    v2 = 28;
+    bytes32  r2 = 0xd4b6b40d39494fb0ec5d688f1fb3520b683b81ddeca7c30f80d409bc1ef147b9;
+    bytes32  s2 = 0x7c3da9183db3b075a7028b4bd96fc656cab4e67dd96cff6a74130f26c441dc9f;
 
     function setUp() public {
         hevm = Hevm(address(bytes20(uint160(uint256(keccak256("hevm cheat code"))))));
@@ -56,7 +56,7 @@ contract MapleTokenTest is DSTest {
     }
 
     function test_typehash() public {
-        assertEq(token.PERMIT_TYPEHASH(), 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9);
+        assertEq(token.PERMIT_TYPEHASH(), 0xfc77c2b9d30fe91687fd39abb7d16fcdfe1472d065740051ab8b13e4bf4a617f);
     }
 
     function test_domain_separator() public {
@@ -73,6 +73,7 @@ contract MapleTokenTest is DSTest {
     }
 
     function test_permit_zero_address() public {
+        v = 0;
         uint256 amount = 10 * WAD;
         assertTrue(!usr.try_permit(address(0), bob, amount, uint(-1), v, r, s));
     }
