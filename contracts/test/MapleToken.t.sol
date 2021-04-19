@@ -56,7 +56,7 @@ contract MapleTokenTest is DSTest {
     }
 
     function test_typehash() public {
-        assertEq(token.PERMIT_TYPEHASH(), 0xfc77c2b9d30fe91687fd39abb7d16fcdfe1472d065740051ab8b13e4bf4a617f);
+        assertEq(token.PERMIT_TYPEHASH(), keccak256("Permit(address owner,address spender,uint256 amount,uint256 nonce,uint256 deadline)"));
     }
 
     function test_domain_separator() public {
