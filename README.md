@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/44272939/116272804-33e78d00-a74f-11eb-97ab-77b7e13dc663.png" height="100" />
+</p>
+
 # Maple (MPL) Token
 
 The MPL token is the native governance token of the Maple protocol. It inherits:
@@ -6,9 +10,7 @@ The MPL token is the native governance token of the Maple protocol. It inherits:
 
 More details on the MPL token are included in the maple-core [wiki](https://github.com/maple-labs/maple-core/wiki/MPL-Token).
 
----
-
-
-<p align="center">
-  <img src="https://maple.finance/static/logo-52b94a65fa2c9a7c9ede3cb978b2408f.png" height="60" />
-</p>
+## Audit reports
+| Auditor | Report link  |
+|---|---|
+| Peckshield  |  [Peckshield-Audit-Report-MAPLE-ERC20-v1.1](https://gateway.pinata.cloud/ipfs/QmcjqUDPzkQYZMULpLVoEhaPEibT9Fb6EVGvAWHTEFQQMj/PeckShield-Audit-Report-MAPLE-ERC20-v1.1.pdf) |
