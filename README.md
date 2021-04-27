@@ -15,5 +15,5 @@ More details on the MPL token are included in the maple-core [wiki](https://gith
 
 
 <p align="center">
-  <img src="https://maple.finance/static/logo-52b94a65fa2c9a7c9ede3cb978b2408f.png" height="60" />
+  <img src="https://user-images.githubusercontent.com/44272939/116272468-ec610100-a74e-11eb-808c-63ca36212b7f.png" height="60" />
 </p>
