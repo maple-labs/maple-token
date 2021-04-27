@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/44272939/116272804-33e78d00-a74f-11eb-97ab-77b7e13dc663.png" height="60" />
+  <img src="https://user-images.githubusercontent.com/44272939/116272468-ec610100-a74e-11eb-808c-63ca36212b7f.png height="100" />
 </p>
 
 # Maple (MPL) Token
