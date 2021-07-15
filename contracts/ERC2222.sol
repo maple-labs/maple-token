@@ -1,27 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.6.11;
 
-import "lib/openzeppelin-contracts/contracts/token/ERC20/SafeERC20.sol";
-import "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import "lib/openzeppelin-contracts/contracts/math/SafeMath.sol";
-import "lib/openzeppelin-contracts/contracts/math/SignedSafeMath.sol";
-import "./IERC2222.sol";
-import "./math/UintSafeMath.sol";
-import "./math/IntSafeMath.sol";
+import { SafeMath }          from "../lib/openzeppelin-contracts/contracts/math/SafeMath.sol";
+import { SignedSafeMath }    from "../lib/openzeppelin-contracts/contracts/math/SignedSafeMath.sol";
+import { ERC20 }             from "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import { IERC20, SafeERC20 } from "../lib/openzeppelin-contracts/contracts/token/ERC20/SafeERC20.sol";
+
+import { IntSafeMath }  from "./math/IntSafeMath.sol";
+import { UintSafeMath } from "./math/UintSafeMath.sol";
+
+import { IERC2222 } from "./IERC2222.sol";
 
 abstract contract ERC2222 is IERC2222, ERC20 {
+
+    using SafeERC20      for  IERC20;
     using SafeMath       for uint256;
-    using UintSafeMath   for uint256;
     using SignedSafeMath for  int256;
     using IntSafeMath    for  int256;
-    using SafeERC20      for  IERC20;
+    using UintSafeMath   for uint256;
 
     IERC20 public fundsToken;  // The fundsToken (dividends)
 
     uint256 public fundsTokenBalance;  // The amount of fundsToken (loanAsset) currently present and accounted for in this contract.
 
     uint256 internal constant pointsMultiplier = 2 ** 128;
-    uint256 internal pointsPerShare;
+    uint256 internal          pointsPerShare;
 
     mapping(address => int256)  internal pointsCorrection;
     mapping(address => uint256) internal withdrawnFunds; // 3
@@ -60,7 +63,6 @@ abstract contract ERC2222 is IERC2222, ERC20 {
      * @dev Prepares funds withdrawal
      * @dev It emits a `FundsWithdrawn` event if the amount of withdrawn ether is greater than 0.
      */
-    
     function _prepareWithdraw() internal returns (uint256) {
         uint256 _withdrawableDividend = withdrawableFundsOf(msg.sender);
 
@@ -75,7 +77,6 @@ abstract contract ERC2222 is IERC2222, ERC20 {
      * @dev Prepares funds withdrawal on behalf of a user
      * @dev It emits a `FundsWithdrawn` event if the amount of withdrawn ether is greater than 0.
      */
-    
     function _prepareWithdrawOnBehalf(address user) internal returns (uint256) {
         uint256 _withdrawableDividend = withdrawableFundsOf(user);
 
@@ -225,4 +226,5 @@ abstract contract ERC2222 is IERC2222, ERC20 {
             _distributeFunds(newFunds.toUint256Safe());
         }
     }
+
 }

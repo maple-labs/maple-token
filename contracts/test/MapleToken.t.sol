@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.6.11;
 
-import "ds-test/test.sol";
+import { DSTest } from "../../lib/ds-test/contracts/test.sol";
 
-import "../MapleToken.sol";
+import { MapleToken } from "../MapleToken.sol";
 
 interface Hevm {
+
     function warp(uint256) external;
+
 }
 
 contract MapleTokenUser {
+
     MapleToken token;
 
     constructor(MapleToken token_) public {
@@ -20,6 +23,7 @@ contract MapleTokenUser {
         string memory sig = "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)";
         (ok,) = address(token).call(abi.encodeWithSignature(sig, owner, spender, value, deadline, v, r, s));
     }
+
 }
 
 contract MapleTokenTest is DSTest {
@@ -112,4 +116,5 @@ contract MapleTokenTest is DSTest {
         // Second time nonce has been consumed and should fail
         assertTrue(!usr.try_permit(ali, bob, amount, uint(-1), v, r, s));
     }
+
 }

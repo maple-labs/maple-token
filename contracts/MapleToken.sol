@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.6.11;
 
-import "./ERC2222.sol";
+import { ERC2222 } from "./ERC2222.sol";
 
 contract MapleToken is ERC2222 {
 
@@ -15,7 +15,7 @@ contract MapleToken is ERC2222 {
         @param name       Name of the token.
         @param symbol     Symbol of the token.
         @param fundsToken The asset claimable / distributed via ERC-2222, deposited to MapleToken contract.
-    */
+     */
     constructor (
         string memory name,
         string memory symbol,
@@ -48,7 +48,7 @@ contract MapleToken is ERC2222 {
         @param v        ECDSA signature v component
         @param r        ECDSA signature r component
         @param s        ECDSA signature s component
-    */
+     */
     function permit(address owner, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external {
         require(deadline >= block.timestamp, 'MapleToken:EXPIRED');
         bytes32 digest = keccak256(
@@ -62,4 +62,5 @@ contract MapleToken is ERC2222 {
         require(recoveredAddress == owner, 'MapleToken:INVALID_SIGNATURE');
         _approve(owner, spender, amount);
     }
+
 }

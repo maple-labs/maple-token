@@ -2,17 +2,6 @@
 pragma solidity 0.6.11;
 
 interface IERC2222 {
-    /**
-     * @dev Returns the total amount of funds a given address is able to withdraw currently.
-     * @param owner Address of FDT holder
-     * @return A uint256 representing the available funds for a given account
-     */
-    function withdrawableFundsOf(address owner) external view returns (uint256);
-
-    /**
-     * @dev Withdraws all available funds for a FDT holder. 
-     */
-    function withdrawFunds() external;
 
     /**
      * @dev This event emits when new funds are distributed
@@ -28,4 +17,17 @@ interface IERC2222 {
      * @param totalWithdrawn the total amount of funds that were withdrawn
      */
     event FundsWithdrawn(address indexed by, uint256 fundsWithdrawn, uint256 totalWithdrawn);
+
+    /**
+     * @dev Returns the total amount of funds a given address is able to withdraw currently.
+     * @param owner Address of FDT holder
+     * @return A uint256 representing the available funds for a given account
+     */
+    function withdrawableFundsOf(address owner) external view returns (uint256);
+
+    /**
+     * @dev Withdraws all available funds for a FDT holder. 
+     */
+    function withdrawFunds() external;
+
 }
