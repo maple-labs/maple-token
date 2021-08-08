@@ -1,35 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.6.11;
 
-import { DSTest } from "../../lib/ds-test/contracts/test.sol";
+import { DSTest } from "../../modules/ds-test/contracts/test.sol";
 
 import { MapleToken } from "../MapleToken.sol";
 
+import { MapleTokenUser } from "./accounts/MapleTokenUser.sol";
+
 interface Hevm {
-
     function warp(uint256) external;
-
-}
-
-contract MapleTokenUser {
-
-    MapleToken token;
-
-    constructor(MapleToken token_) public {
-        token = token_;
-    }
-
-    function try_permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external returns (bool ok) {
-        string memory sig = "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)";
-        (ok,) = address(token).call(abi.encodeWithSignature(sig, owner, spender, value, deadline, v, r, s));
-    }
-
 }
 
 contract MapleTokenTest is DSTest {
 
-    Hevm hevm;
-    MapleToken token;
+    Hevm           hevm;
+    MapleToken     token;
     MapleTokenUser usr;
 
     uint256 constant WAD = 10 ** 18;
@@ -43,11 +28,14 @@ contract MapleTokenTest is DSTest {
     bytes32  r2 = 0xd4b6b40d39494fb0ec5d688f1fb3520b683b81ddeca7c30f80d409bc1ef147b9;
     bytes32  s2 = 0x7c3da9183db3b075a7028b4bd96fc656cab4e67dd96cff6a74130f26c441dc9f;
 
-    function setUp() public {
+    constructor() public {
         hevm = Hevm(address(bytes20(uint160(uint256(keccak256("hevm cheat code"))))));
+    }
+
+    function setUp() public {
         hevm.warp(482112000);
         token = new MapleToken("Maple Token", "MPL", address(0x1111111111111111111111111111111111111111));
-        usr = new MapleTokenUser(token);
+        usr   = new MapleTokenUser();
         log_named_address("usr", address(usr));
     }
 
@@ -69,23 +57,24 @@ contract MapleTokenTest is DSTest {
 
     function test_permit() public {
         uint256 amount = 10 * WAD;
-        assertEq(token.nonces(ali), 0);
+
+        assertEq(token.nonces(ali),         0);
         assertEq(token.allowance(ali, bob), 0);
-        assertTrue(usr.try_permit(ali, bob, amount, uint(-1), v, r, s));
+
+        assertTrue(usr.try_permit(address(token), ali, bob, amount, type(uint256).max, v, r, s));
+
         assertEq(token.allowance(ali, bob), amount);
-        assertEq(token.nonces(ali), 1);
+        assertEq(token.nonces(ali),         1);
     }
 
     function test_permit_zero_address() public {
-        v = 0;
-        uint256 amount = 10 * WAD;
-        assertTrue(!usr.try_permit(address(0), bob, amount, uint(-1), v, r, s));
+        assertTrue(!usr.try_permit(address(token), address(0), bob, 10 * WAD, type(uint256).max, 0, r, s));
     }
 
     function test_permit_non_owner_address() public {
         uint256 amount = 10 * WAD;
-        assertTrue(!usr.try_permit(bob, ali, amount, uint(-1), v,  r,  s));
-        assertTrue(!usr.try_permit(ali, bob, amount, uint(-1), v2, r2, s2));
+        assertTrue(!usr.try_permit(address(token), bob, ali, amount, type(uint256).max, v,  r,  s));
+        assertTrue(!usr.try_permit(address(token), ali, bob, amount, type(uint256).max, v2, r2, s2));
     }
 
     function test_permit_with_expiry() public {
@@ -94,27 +83,33 @@ contract MapleTokenTest is DSTest {
 
         // Expired permit should fail
         hevm.warp(482112000 + 1 hours + 1);
+
         assertEq(block.timestamp, 482112000 + 1 hours + 1);
-        assertTrue(!usr.try_permit(ali, bob, amount, expiry, v2, r2, s2));
+
+        assertTrue(!usr.try_permit(address(token), ali, bob, amount, expiry, v2, r2, s2));
+
         assertEq(token.allowance(ali, bob), 0);
-        assertEq(token.nonces(ali), 0);
+        assertEq(token.nonces(ali),         0);
 
         // Valid permit should succeed
         hevm.warp(482112000 + 1 hours);
+
         assertEq(block.timestamp, 482112000 + 1 hours);
-        assertTrue(usr.try_permit(ali, bob, amount, expiry, v2, r2, s2));
+
+        assertTrue(usr.try_permit(address(token), ali, bob, amount, expiry, v2, r2, s2));
+
         assertEq(token.allowance(ali, bob), amount);
-        assertEq(token.nonces(ali), 1);
+        assertEq(token.nonces(ali),         1);
     }
 
     function test_permit_replay() public {
         uint256 amount = 10 * WAD;
 
         // First time should succeed
-        assertTrue(usr.try_permit(ali, bob, amount, uint(-1), v, r, s));
+        assertTrue(usr.try_permit(address(token), ali, bob, amount, uint(-1), v, r, s));
 
         // Second time nonce has been consumed and should fail
-        assertTrue(!usr.try_permit(ali, bob, amount, uint(-1), v, r, s));
+        assertTrue(!usr.try_permit(address(token), ali, bob, amount, uint(-1), v, r, s));
     }
 
 }
