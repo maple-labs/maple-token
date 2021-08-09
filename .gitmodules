@@ -1,6 +1,6 @@
-[submodule "lib/openzeppelin-contracts"]
-	path = lib/openzeppelin-contracts
-	url = https://github.com/Openzeppelin/openzeppelin-contracts
-[submodule "lib/ds-test"]
-	path = lib/ds-test
-	url = https://github.com/maple-labs/ds-test
+[submodule "modules/openzeppelin-contracts"]
+	path = modules/openzeppelin-contracts
+	url = https://github.com/Openzeppelin/openzeppelin-contracts.git
+[submodule "modules/maple-test"]
+	path = modules/maple-test
+	url = https://github.com/maple-labs/maple-test.git

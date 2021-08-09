@@ -1,15 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.6.11;
 
-import { DSTest } from "../../lib/ds-test/contracts/test.sol";
+import { MapleTest, Hevm } from "../../modules/maple-test/contracts/test.sol";
 
 import { MapleToken } from "../MapleToken.sol";
-
-interface Hevm {
-
-    function warp(uint256) external;
-
-}
 
 contract MapleTokenUser {
 
@@ -26,33 +20,28 @@ contract MapleTokenUser {
 
 }
 
-contract MapleTokenTest is DSTest {
+contract MapleTokenTest is MapleTest {
 
-    Hevm hevm;
     MapleToken token;
     MapleTokenUser usr;
 
-    uint256 constant WAD = 10 ** 18;
+    uint256 holder1Pk = 1;
+    uint256 holder2Pk = 2;
+    uint256 nonce     = 0;
+    uint256 deadline  = 5000000000; // timestamp far in the future
 
-    address ali = 0x17ec8597ff92C3F44523bDc65BF0f1bE632917ff;
-    address bob = 0x63FC2aD3d021a4D7e64323529a55a9442C444dA0;
-    uint8     v = 27;
-    bytes32   r = 0xd6ac3dffef695bb6035537394acd0294344798e77491a76b96a65fd4f7d32452;
-    bytes32   s = 0x6252eda670c17df6d66ecb195124c7b7aee51c15842ea9f2704cc5ba0846ad0f;
-    uint8    v2 = 28;
-    bytes32  r2 = 0xd4b6b40d39494fb0ec5d688f1fb3520b683b81ddeca7c30f80d409bc1ef147b9;
-    bytes32  s2 = 0x7c3da9183db3b075a7028b4bd96fc656cab4e67dd96cff6a74130f26c441dc9f;
+    address holder1 = hevm.addr(holder1Pk);
+    address holder2 = hevm.addr(holder2Pk);
+    address spender = holder2; // address of user who `owner` is approving
 
     function setUp() public {
-        hevm = Hevm(address(bytes20(uint160(uint256(keccak256("hevm cheat code"))))));
-        hevm.warp(482112000);
+        hevm.warp(deadline - 52 weeks);
         token = new MapleToken("Maple Token", "MPL", address(0x1111111111111111111111111111111111111111));
-        usr = new MapleTokenUser(token);
-        log_named_address("usr", address(usr));
+        usr   = new MapleTokenUser(token);
     }
 
     function test_token_address() public {
-        assertEq(address(token), address(0xDB356e865AAaFa1e37764121EA9e801Af13eEb83));
+        assertEq(address(token), address(0xCe71065D4017F316EC606Fe4422e11eB2c47c246));
     }
 
     function test_initial_balance() public {
@@ -64,28 +53,34 @@ contract MapleTokenTest is DSTest {
     }
 
     function test_domain_separator() public {
-        assertEq(token.DOMAIN_SEPARATOR(), 0xd85593d420e1e73e8af750482b5cfee5ea0cba135ca2b28cc47519ec578bb8b9);
+        assertEq(token.DOMAIN_SEPARATOR(), 0x06c0ee43424d25534e5af6b6af862333b542f6583ff9948b8299442926099eec);
     }
 
     function test_permit() public {
         uint256 amount = 10 * WAD;
-        assertEq(token.nonces(ali), 0);
-        assertEq(token.allowance(ali, bob), 0);
-        assertTrue(usr.try_permit(ali, bob, amount, uint(-1), v, r, s));
-        assertEq(token.allowance(ali, bob), amount);
-        assertEq(token.nonces(ali), 1);
+        assertEq(token.nonces(holder1),             0);
+        assertEq(token.allowance(holder1, holder2), 0);
+
+        (uint8 v, bytes32 r, bytes32 s)= getValidPermitSignature(amount, holder1, holder1Pk, deadline);
+        assertTrue(usr.try_permit(holder1, holder2, amount, deadline, v, r, s));
+
+        assertEq(token.allowance(holder1, holder2), amount);
+        assertEq(token.nonces(holder1),             1);
     }
 
     function test_permit_zero_address() public {
-        v = 0;
         uint256 amount = 10 * WAD;
-        assertTrue(!usr.try_permit(address(0), bob, amount, uint(-1), v, r, s));
+        (uint8 v, bytes32 r, bytes32 s)= getValidPermitSignature(amount, holder1, holder1Pk, deadline);
+        assertTrue(!usr.try_permit(address(0), holder2, amount, deadline, v, r, s));
     }
 
     function test_permit_non_owner_address() public {
         uint256 amount = 10 * WAD;
-        assertTrue(!usr.try_permit(bob, ali, amount, uint(-1), v,  r,  s));
-        assertTrue(!usr.try_permit(ali, bob, amount, uint(-1), v2, r2, s2));
+        (uint8 v, bytes32 r, bytes32 s)= getValidPermitSignature(amount, holder1, holder1Pk, deadline);
+        assertTrue(!usr.try_permit(holder2, holder1, amount, deadline, v,  r,  s));
+
+        (v, r, s)= getValidPermitSignature(amount, holder2, holder2Pk, deadline);
+        assertTrue(!usr.try_permit(holder1, holder2, amount, deadline, v, r, s));
     }
 
     function test_permit_with_expiry() public {
@@ -95,26 +90,52 @@ contract MapleTokenTest is DSTest {
         // Expired permit should fail
         hevm.warp(482112000 + 1 hours + 1);
         assertEq(block.timestamp, 482112000 + 1 hours + 1);
-        assertTrue(!usr.try_permit(ali, bob, amount, expiry, v2, r2, s2));
-        assertEq(token.allowance(ali, bob), 0);
-        assertEq(token.nonces(ali), 0);
+
+        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, holder1, holder1Pk, expiry);
+        assertTrue(!usr.try_permit(holder1, holder2, amount, expiry, v, r, s));
+
+        assertEq(token.allowance(holder1, holder2), 0);
+        assertEq(token.nonces(holder1),             0);
 
         // Valid permit should succeed
         hevm.warp(482112000 + 1 hours);
         assertEq(block.timestamp, 482112000 + 1 hours);
-        assertTrue(usr.try_permit(ali, bob, amount, expiry, v2, r2, s2));
-        assertEq(token.allowance(ali, bob), amount);
-        assertEq(token.nonces(ali), 1);
+
+        (v, r, s)= getValidPermitSignature(amount, holder1, holder1Pk, expiry);
+        assertTrue(usr.try_permit(holder1, holder2, amount, expiry, v, r, s));
+
+        assertEq(token.allowance(holder1, holder2), amount);
+        assertEq(token.nonces(holder1),             1);
     }
 
     function test_permit_replay() public {
         uint256 amount = 10 * WAD;
+        
+        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, holder1, holder1Pk, deadline);
 
         // First time should succeed
-        assertTrue(usr.try_permit(ali, bob, amount, uint(-1), v, r, s));
+        assertTrue(usr.try_permit(holder1, holder2, amount, deadline, v, r, s));
 
         // Second time nonce has been consumed and should fail
-        assertTrue(!usr.try_permit(ali, bob, amount, uint(-1), v, r, s));
+        assertTrue(!usr.try_permit(holder1, holder2, amount, uint(-1), v, r, s));
+    }
+
+    // Returns an ERC-2612 `permit` digest for the `owner` to sign
+    function getDigest(address owner_, address spender_, uint256 value_, uint256 nonce_, uint256 deadline_) public view returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                '\x19\x01',
+                token.DOMAIN_SEPARATOR(),
+                keccak256(abi.encode(token.PERMIT_TYPEHASH(), owner_, spender_, value_, nonce_, deadline_))
+            )
+        );
+    }
+
+    // Returns a valid `permit` signature signed by this contract's `owner` address
+    function getValidPermitSignature(uint256 value, address owner, uint256 ownerpk, uint256 deadline_) public view returns (uint8, bytes32, bytes32) {
+        bytes32 digest = getDigest(owner, spender, value, nonce, deadline_);
+        (uint8 v, bytes32 r, bytes32 s) = hevm.sign(ownerpk, digest);
+        return (v, r, s);
     }
 
 }
