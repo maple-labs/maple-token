@@ -25,14 +25,13 @@ contract MapleTokenTest is MapleTest {
     MapleToken token;
     MapleTokenUser usr;
 
-    uint256 holder1Pk = 1;
-    uint256 holder2Pk = 2;
+    uint256 skOwner   = 1;
+    uint256 skSpender = 2;
     uint256 nonce     = 0;
-    uint256 deadline  = 5000000000; // timestamp far in the future
+    uint256 deadline  = 5000000000; // Timestamp far in the future
 
-    address holder1 = hevm.addr(holder1Pk);
-    address holder2 = hevm.addr(holder2Pk);
-    address spender = holder2; // address of user who `owner` is approving
+    address owner   = hevm.addr(skOwner);
+    address spender = hevm.addr(skSpender);
 
     function setUp() public {
         hevm.warp(deadline - 52 weeks);
@@ -58,29 +57,29 @@ contract MapleTokenTest is MapleTest {
 
     function test_permit() public {
         uint256 amount = 10 * WAD;
-        assertEq(token.nonces(holder1),             0);
-        assertEq(token.allowance(holder1, holder2), 0);
+        assertEq(token.nonces(owner),             0);
+        assertEq(token.allowance(owner, spender), 0);
 
-        (uint8 v, bytes32 r, bytes32 s)= getValidPermitSignature(amount, holder1, holder1Pk, deadline);
-        assertTrue(usr.try_permit(holder1, holder2, amount, deadline, v, r, s));
+        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, owner, skOwner, deadline);
+        assertTrue(usr.try_permit(owner, spender, amount, deadline, v, r, s));
 
-        assertEq(token.allowance(holder1, holder2), amount);
-        assertEq(token.nonces(holder1),             1);
+        assertEq(token.allowance(owner, spender), amount);
+        assertEq(token.nonces(owner),             1);
     }
 
     function test_permit_zero_address() public {
         uint256 amount = 10 * WAD;
-        (uint8 v, bytes32 r, bytes32 s)= getValidPermitSignature(amount, holder1, holder1Pk, deadline);
-        assertTrue(!usr.try_permit(address(0), holder2, amount, deadline, v, r, s));
+        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, owner, skOwner, deadline);
+        assertTrue(!usr.try_permit(address(0), spender, amount, deadline, v, r, s));
     }
 
     function test_permit_non_owner_address() public {
         uint256 amount = 10 * WAD;
-        (uint8 v, bytes32 r, bytes32 s)= getValidPermitSignature(amount, holder1, holder1Pk, deadline);
-        assertTrue(!usr.try_permit(holder2, holder1, amount, deadline, v,  r,  s));
+        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, owner, skOwner, deadline);
+        assertTrue(!usr.try_permit(spender, owner, amount, deadline, v,  r,  s));
 
-        (v, r, s)= getValidPermitSignature(amount, holder2, holder2Pk, deadline);
-        assertTrue(!usr.try_permit(holder1, holder2, amount, deadline, v, r, s));
+        (v, r, s)= getValidPermitSignature(amount, spender, skSpender, deadline);
+        assertTrue(!usr.try_permit(owner, spender, amount, deadline, v, r, s));
     }
 
     function test_permit_with_expiry() public {
@@ -91,33 +90,33 @@ contract MapleTokenTest is MapleTest {
         hevm.warp(482112000 + 1 hours + 1);
         assertEq(block.timestamp, 482112000 + 1 hours + 1);
 
-        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, holder1, holder1Pk, expiry);
-        assertTrue(!usr.try_permit(holder1, holder2, amount, expiry, v, r, s));
+        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, owner, skOwner, expiry);
+        assertTrue(!usr.try_permit(owner, spender, amount, expiry, v, r, s));
 
-        assertEq(token.allowance(holder1, holder2), 0);
-        assertEq(token.nonces(holder1),             0);
+        assertEq(token.allowance(owner, spender), 0);
+        assertEq(token.nonces(owner),             0);
 
         // Valid permit should succeed
         hevm.warp(482112000 + 1 hours);
         assertEq(block.timestamp, 482112000 + 1 hours);
 
-        (v, r, s)= getValidPermitSignature(amount, holder1, holder1Pk, expiry);
-        assertTrue(usr.try_permit(holder1, holder2, amount, expiry, v, r, s));
+        (v, r, s) = getValidPermitSignature(amount, owner, skOwner, expiry);
+        assertTrue(usr.try_permit(owner, spender, amount, expiry, v, r, s));
 
-        assertEq(token.allowance(holder1, holder2), amount);
-        assertEq(token.nonces(holder1),             1);
+        assertEq(token.allowance(owner, spender), amount);
+        assertEq(token.nonces(owner),             1);
     }
 
     function test_permit_replay() public {
         uint256 amount = 10 * WAD;
         
-        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, holder1, holder1Pk, deadline);
+        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, owner, skOwner, deadline);
 
         // First time should succeed
-        assertTrue(usr.try_permit(holder1, holder2, amount, deadline, v, r, s));
+        assertTrue(usr.try_permit(owner, spender, amount, deadline, v, r, s));
 
         // Second time nonce has been consumed and should fail
-        assertTrue(!usr.try_permit(holder1, holder2, amount, uint(-1), v, r, s));
+        assertTrue(!usr.try_permit(owner, spender, amount, deadline, v, r, s));
     }
 
     // Returns an ERC-2612 `permit` digest for the `owner` to sign
@@ -132,8 +131,8 @@ contract MapleTokenTest is MapleTest {
     }
 
     // Returns a valid `permit` signature signed by this contract's `owner` address
-    function getValidPermitSignature(uint256 value, address owner, uint256 ownerpk, uint256 deadline_) public view returns (uint8, bytes32, bytes32) {
-        bytes32 digest = getDigest(owner, spender, value, nonce, deadline_);
+    function getValidPermitSignature(uint256 value, address owner_, uint256 ownerpk, uint256 deadline_) public view returns (uint8, bytes32, bytes32) {
+        bytes32 digest = getDigest(owner_, spender, value, nonce, deadline_);
         (uint8 v, bytes32 r, bytes32 s) = hevm.sign(ownerpk, digest);
         return (v, r, s);
     }
