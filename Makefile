@@ -1,3 +1,6 @@
-build :; DAPP_SRC=contracts DAPP_BUILD_OPTIMIZE=0 DAPP_BUILD_OPTIMIZE_RUNS=0 dapp --use solc:0.6.11 build
-test  :; DAPP_SRC=contracts DAPP_BUILD_OPTIMIZE=0 DAPP_BUILD_OPTIMIZE_RUNS=0 dapp --use solc:0.6.11 test -v ${TEST_FLAGS}
-clean :; DAPP_SRC=contracts dapp clean
+prod    :; ./build.sh -c ./config/prod.json
+dev     :; ./build.sh -c ./config/dev.json
+ci      :; ./build.sh -c ./config/ci.json
+clean   :; dapp clean
+test    :; ./test.sh
+release :; ./release.sh -v 0.9.9

@@ -1,120 +1,122 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.6.11;
 
-import { DSTest } from "../../lib/ds-test/contracts/test.sol";
+import { MapleTest, Hevm } from "../../modules/maple-test/contracts/test.sol";
 
 import { MapleToken } from "../MapleToken.sol";
 
-interface Hevm {
+import { MapleTokenUser } from "./accounts/MapleTokenUser.sol";
 
-    function warp(uint256) external;
+contract MapleTokenTest is MapleTest {
 
-}
-
-contract MapleTokenUser {
-
-    MapleToken token;
-
-    constructor(MapleToken token_) public {
-        token = token_;
-    }
-
-    function try_permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external returns (bool ok) {
-        string memory sig = "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)";
-        (ok,) = address(token).call(abi.encodeWithSignature(sig, owner, spender, value, deadline, v, r, s));
-    }
-
-}
-
-contract MapleTokenTest is DSTest {
-
-    Hevm hevm;
-    MapleToken token;
+    MapleToken     token;
     MapleTokenUser usr;
 
-    uint256 constant WAD = 10 ** 18;
+    uint256 skOwner   = 1;
+    uint256 skSpender = 2;
+    uint256 nonce     = 0;
+    uint256 deadline  = 5000000000; // Timestamp far in the future
 
-    address ali = 0x17ec8597ff92C3F44523bDc65BF0f1bE632917ff;
-    address bob = 0x63FC2aD3d021a4D7e64323529a55a9442C444dA0;
-    uint8     v = 27;
-    bytes32   r = 0xd6ac3dffef695bb6035537394acd0294344798e77491a76b96a65fd4f7d32452;
-    bytes32   s = 0x6252eda670c17df6d66ecb195124c7b7aee51c15842ea9f2704cc5ba0846ad0f;
-    uint8    v2 = 28;
-    bytes32  r2 = 0xd4b6b40d39494fb0ec5d688f1fb3520b683b81ddeca7c30f80d409bc1ef147b9;
-    bytes32  s2 = 0x7c3da9183db3b075a7028b4bd96fc656cab4e67dd96cff6a74130f26c441dc9f;
+    address owner   = hevm.addr(skOwner);
+    address spender = hevm.addr(skSpender);
 
-    function setUp() public {
-        hevm = Hevm(address(bytes20(uint160(uint256(keccak256("hevm cheat code"))))));
-        hevm.warp(482112000);
+    function setUp() external {
+        hevm.warp(deadline - 52 weeks);
         token = new MapleToken("Maple Token", "MPL", address(0x1111111111111111111111111111111111111111));
-        usr = new MapleTokenUser(token);
-        log_named_address("usr", address(usr));
+        usr   = new MapleTokenUser();
     }
 
-    function test_token_address() public {
-        assertEq(address(token), address(0xDB356e865AAaFa1e37764121EA9e801Af13eEb83));
-    }
-
-    function test_initial_balance() public {
+    function test_initialBalance() external {
         assertEq(token.balanceOf(address(this)), 10_000_000 * WAD);
     }
 
-    function test_typehash() public {
+    function test_typehash() external {
         assertEq(token.PERMIT_TYPEHASH(), keccak256("Permit(address owner,address spender,uint256 amount,uint256 nonce,uint256 deadline)"));
     }
 
-    function test_domain_separator() public {
-        assertEq(token.DOMAIN_SEPARATOR(), 0xd85593d420e1e73e8af750482b5cfee5ea0cba135ca2b28cc47519ec578bb8b9);
+    function test_domainSeparator() external {
+        assertEq(token.DOMAIN_SEPARATOR(), 0x06c0ee43424d25534e5af6b6af862333b542f6583ff9948b8299442926099eec);
     }
 
-    function test_permit() public {
+    function test_permit() external {
         uint256 amount = 10 * WAD;
-        assertEq(token.nonces(ali), 0);
-        assertEq(token.allowance(ali, bob), 0);
-        assertTrue(usr.try_permit(ali, bob, amount, uint(-1), v, r, s));
-        assertEq(token.allowance(ali, bob), amount);
-        assertEq(token.nonces(ali), 1);
+        assertEq(token.nonces(owner),             0);
+        assertEq(token.allowance(owner, spender), 0);
+
+        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, owner, skOwner, deadline);
+        assertTrue(usr.try_permit(address(token), owner, spender, amount, deadline, v, r, s));
+
+        assertEq(token.allowance(owner, spender), amount);
+        assertEq(token.nonces(owner),             1);
     }
 
-    function test_permit_zero_address() public {
-        v = 0;
+    function test_permitZeroAddress() external {
         uint256 amount = 10 * WAD;
-        assertTrue(!usr.try_permit(address(0), bob, amount, uint(-1), v, r, s));
+        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, owner, skOwner, deadline);
+        assertTrue(!usr.try_permit(address(token), address(0), spender, amount, deadline, v, r, s));
     }
 
-    function test_permit_non_owner_address() public {
+    function test_permitNonOwnerAddress() external {
         uint256 amount = 10 * WAD;
-        assertTrue(!usr.try_permit(bob, ali, amount, uint(-1), v,  r,  s));
-        assertTrue(!usr.try_permit(ali, bob, amount, uint(-1), v2, r2, s2));
+        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, owner, skOwner, deadline);
+        assertTrue(!usr.try_permit(address(token), spender, owner, amount, deadline, v,  r,  s));
+
+        (v, r, s) = getValidPermitSignature(amount, spender, skSpender, deadline);
+        assertTrue(!usr.try_permit(address(token), owner, spender, amount, deadline, v, r, s));
     }
 
-    function test_permit_with_expiry() public {
+    function test_permitWithExpiry() external {
         uint256 amount = 10 * WAD;
         uint256 expiry = 482112000 + 1 hours;
 
         // Expired permit should fail
         hevm.warp(482112000 + 1 hours + 1);
         assertEq(block.timestamp, 482112000 + 1 hours + 1);
-        assertTrue(!usr.try_permit(ali, bob, amount, expiry, v2, r2, s2));
-        assertEq(token.allowance(ali, bob), 0);
-        assertEq(token.nonces(ali), 0);
+
+        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, owner, skOwner, expiry);
+        assertTrue(!usr.try_permit(address(token), owner, spender, amount, expiry, v, r, s));
+
+        assertEq(token.allowance(owner, spender), 0);
+        assertEq(token.nonces(owner),             0);
 
         // Valid permit should succeed
         hevm.warp(482112000 + 1 hours);
         assertEq(block.timestamp, 482112000 + 1 hours);
-        assertTrue(usr.try_permit(ali, bob, amount, expiry, v2, r2, s2));
-        assertEq(token.allowance(ali, bob), amount);
-        assertEq(token.nonces(ali), 1);
+
+        (v, r, s) = getValidPermitSignature(amount, owner, skOwner, expiry);
+        assertTrue(usr.try_permit(address(token), owner, spender, amount, expiry, v, r, s));
+
+        assertEq(token.allowance(owner, spender), amount);
+        assertEq(token.nonces(owner),             1);
     }
 
-    function test_permit_replay() public {
+    function test_permitReplay() external {
         uint256 amount = 10 * WAD;
+        (uint8 v, bytes32 r, bytes32 s) = getValidPermitSignature(amount, owner, skOwner, deadline);
 
         // First time should succeed
-        assertTrue(usr.try_permit(ali, bob, amount, uint(-1), v, r, s));
+        assertTrue(usr.try_permit(address(token), owner, spender, amount, deadline, v, r, s));
 
         // Second time nonce has been consumed and should fail
-        assertTrue(!usr.try_permit(ali, bob, amount, uint(-1), v, r, s));
+        assertTrue(!usr.try_permit(address(token), owner, spender, amount, deadline, v, r, s));
+    }
+
+    // Returns an ERC-2612 `permit` digest for the `owner` to sign
+    function getDigest(address owner_, address spender_, uint256 value_, uint256 nonce_, uint256 deadline_) internal view returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                '\x19\x01',
+                token.DOMAIN_SEPARATOR(),
+                keccak256(abi.encode(token.PERMIT_TYPEHASH(), owner_, spender_, value_, nonce_, deadline_))
+            )
+        );
+    }
+
+    // Returns a valid `permit` signature signed by this contract's `owner` address
+    function getValidPermitSignature(uint256 value, address owner_, uint256 ownersk, uint256 deadline_) internal view returns (uint8, bytes32, bytes32) {
+        bytes32 digest = getDigest(owner_, spender, value, nonce, deadline_);
+        (uint8 v, bytes32 r, bytes32 s) = hevm.sign(ownersk, digest);
+        return (v, r, s);
     }
 
 }

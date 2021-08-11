@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.6.11;
 
-import { SafeMath }          from "../lib/openzeppelin-contracts/contracts/math/SafeMath.sol";
-import { SignedSafeMath }    from "../lib/openzeppelin-contracts/contracts/math/SignedSafeMath.sol";
-import { ERC20 }             from "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import { IERC20, SafeERC20 } from "../lib/openzeppelin-contracts/contracts/token/ERC20/SafeERC20.sol";
+import { SafeMath }          from "../modules/openzeppelin-contracts/contracts/math/SafeMath.sol";
+import { SignedSafeMath }    from "../modules/openzeppelin-contracts/contracts/math/SignedSafeMath.sol";
+import { ERC20 }             from "../modules/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import { IERC20, SafeERC20 } from "../modules/openzeppelin-contracts/contracts/token/ERC20/SafeERC20.sol";
 
-import { IntSafeMath }  from "./math/IntSafeMath.sol";
-import { UintSafeMath } from "./math/UintSafeMath.sol";
+import { IntSafeMath }  from "./libraries/IntSafeMath.sol";
+import { UintSafeMath } from "./libraries/UintSafeMath.sol";
 
-import { IERC2222 } from "./IERC2222.sol";
+import { IERC2222 } from "./interfaces/IERC2222.sol";
 
 abstract contract ERC2222 is IERC2222, ERC20 {
 
@@ -19,21 +19,17 @@ abstract contract ERC2222 is IERC2222, ERC20 {
     using IntSafeMath    for  int256;
     using UintSafeMath   for uint256;
 
-    IERC20 public fundsToken;  // The fundsToken (dividends)
-
-    uint256 public fundsTokenBalance;  // The amount of fundsToken (loanAsset) currently present and accounted for in this contract.
+    address public override fundsToken;
+    uint256 public override fundsTokenBalance;
 
     uint256 internal constant pointsMultiplier = 2 ** 128;
     uint256 internal          pointsPerShare;
 
     mapping(address => int256)  internal pointsCorrection;
-    mapping(address => uint256) internal withdrawnFunds; // 3
-
-    event PointsPerShareUpdated(uint256 pointsPerShare);
-    event PointsCorrectionUpdated(address account, int256 pointsCorrection);
+    mapping(address => uint256) internal withdrawnFunds;
 
     constructor(string memory name, string memory symbol, address _fundsToken) ERC20(name, symbol) public {
-        fundsToken = IERC20(_fundsToken);
+        fundsToken = _fundsToken;
     }
 
     /**
@@ -87,32 +83,15 @@ abstract contract ERC2222 is IERC2222, ERC20 {
         return _withdrawableDividend;
     }
 
-    /**
-     * @dev View the amount of funds that an address can withdraw.
-     * @param _owner The address of a token holder.
-     * @return The amount funds that `_owner` can withdraw.
-     */
     function withdrawableFundsOf(address _owner) public view override returns (uint256) {
         return accumulativeFundsOf(_owner).sub(withdrawnFunds[_owner]);
     }
 
-    /**
-     * @dev View the amount of funds that an address has withdrawn.
-     * @param _owner The address of a token holder.
-     * @return The amount of funds that `_owner` has withdrawn.
-     */
-    function withdrawnFundsOf(address _owner) public view returns (uint256) {
+    function withdrawnFundsOf(address _owner) public view override returns (uint256) {
         return withdrawnFunds[_owner];
     }
 
-    /**
-     * @dev View the amount of funds that an address has earned in total.
-     * @dev accumulativeFundsOf(_owner) = withdrawableFundsOf(_owner) + withdrawnFundsOf(_owner)
-     * = (pointsPerShare * balanceOf(_owner) + pointsCorrection[_owner]) / pointsMultiplier
-     * @param _owner The address of a token holder.
-     * @return The amount of funds that `_owner` has earned in total.
-     */
-    function accumulativeFundsOf(address _owner) public view returns (uint256) {
+    function accumulativeFundsOf(address _owner) public view override returns (uint256) {
         return
             pointsPerShare
                 .mul(balanceOf(_owner))
@@ -122,10 +101,10 @@ abstract contract ERC2222 is IERC2222, ERC20 {
     }
 
     /**
-     * @dev Internal function that transfer tokens from one address to another.
-     * Update pointsCorrection to keep funds unchanged.
-     * @param from The address to transfer from.
-     * @param to The address to transfer to.
+     * @dev   Internal function that transfer tokens from one address to another.
+     * @dev   Update pointsCorrection to keep funds unchanged.
+     * @param from  The address to transfer from.
+     * @param to    The address to transfer to.
      * @param value The amount to be transferred.
      */
     function _transfer(
@@ -145,10 +124,10 @@ abstract contract ERC2222 is IERC2222, ERC20 {
     }
 
     /**
-     * @dev Internal function that mints tokens to an account.
-     * Update pointsCorrection to keep funds unchanged.
+     * @dev   Internal function that mints tokens to an account.
+     * @dev   Update pointsCorrection to keep funds unchanged.
      * @param account The account that will receive the created tokens.
-     * @param value The amount that will be created.
+     * @param value   The amount that will be created.
      */
     function _mint(address account, uint256 value) internal virtual override {
         super._mint(account, value);
@@ -161,10 +140,10 @@ abstract contract ERC2222 is IERC2222, ERC20 {
     }
 
     /**
-     * @dev Internal function that burns an amount of the token of a given account.
-     * Update pointsCorrection to keep funds unchanged.
+     * @dev   Internal function that burns an amount of the token of a given account.
+     * @dev   Update pointsCorrection to keep funds unchanged.
      * @param account The account whose tokens will be burnt.
-     * @param value The amount that will be burnt.
+     * @param value   The amount that will be burnt.
      */
     function _burn(address account, uint256 value) internal virtual override {
         super._burn(account, value);
@@ -175,51 +154,39 @@ abstract contract ERC2222 is IERC2222, ERC20 {
         emit PointsCorrectionUpdated(account, pointsCorrection[account]);
     }
 
-    /**
-     * @dev Withdraws all available funds for a token holder
-     */
     function withdrawFunds() public virtual override {
         uint256 withdrawableFunds = _prepareWithdraw();
 
         if (withdrawableFunds > uint256(0)) {
-            fundsToken.safeTransfer(msg.sender, withdrawableFunds);
+            IERC20(fundsToken).safeTransfer(msg.sender, withdrawableFunds);
 
             _updateFundsTokenBalance();
         }
     }
 
-    /**
-     * @dev Withdraws all available funds for a token holder, on behalf of token holder
-     */
-    function withdrawFundsOnBehalf(address user) public virtual {
+    function withdrawFundsOnBehalf(address user) public virtual override {
         uint256 withdrawableFunds = _prepareWithdrawOnBehalf(user);
 
         if (withdrawableFunds > uint256(0)) {
-            fundsToken.safeTransfer(user, withdrawableFunds);
+            IERC20(fundsToken).safeTransfer(user, withdrawableFunds);
 
             _updateFundsTokenBalance();
         }
     }
 
     /**
-     * @dev Updates the current funds token balance
-     * and returns the difference of new and previous funds token balances
+     * @dev    Updates the current funds token balance and returns the difference of new and previous funds token balances
      * @return A int256 representing the difference of the new and previous funds token balance
      */
     function _updateFundsTokenBalance() internal virtual returns (int256) {
         uint256 _prevFundsTokenBalance = fundsTokenBalance;
 
-        fundsTokenBalance = fundsToken.balanceOf(address(this));
+        fundsTokenBalance = IERC20(fundsToken).balanceOf(address(this));
 
         return int256(fundsTokenBalance).sub(int256(_prevFundsTokenBalance));
     }
 
-    /**
-     * @dev Register a payment of funds in tokens. May be called directly after a deposit is made.
-     * @dev Calls _updateFundsTokenBalance(), whereby the contract computes the delta of the new and the previous
-     * funds token balance and increments the total received funds (cumulative) by delta by calling _registerFunds()
-     */
-    function updateFundsReceived() public virtual {
+    function updateFundsReceived() public virtual override {
         int256 newFunds = _updateFundsTokenBalance();
 
         if (newFunds > 0) {
