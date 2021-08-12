@@ -1,0 +1,8 @@
+name: maple-token
+version: 1.0.0
+source: contracts
+packages:
+  - path: contracts/MapleToken.sol
+    contractName: MapleToken
+    customChecksum: 0x808cc8afa4482aeb0fb9c1e417c928568ce96c4a469efb9209c9e5c3ed67737a
+customDescription: Maple Token Artifacts and ABIs
