@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.6.11;
 
-interface IMapleToken {
+import { IERC2222 } from "./IERC2222.sol";
+
+interface IMapleToken is IERC2222 {
 
     function DOMAIN_SEPARATOR() external pure returns (bytes32);
 
