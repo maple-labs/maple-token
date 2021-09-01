@@ -34,7 +34,9 @@ contract MapleTokenUser is ERC20User {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external {
+    )
+        external
+    {
         IMapleToken(mplToken).permit(owner, spender, amount, deadline, v, r, s);
     }
 
@@ -63,7 +65,9 @@ contract MapleTokenUser is ERC20User {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external returns (bool ok) {
+    )
+        external returns (bool ok)
+    {
         (ok,) = mplToken.call(abi.encodeWithSelector(IMapleToken.permit.selector, owner, spender, amount, deadline, v, r, s));
     }
 

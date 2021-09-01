@@ -8,6 +8,7 @@ contract ERC20User {
     /************************/
     /*** Direct Functions ***/
     /************************/
+
     function erc20_approve(address token, address spender, uint256 amount) external {
         IERC20(token).approve(spender, amount);
     }
@@ -23,6 +24,7 @@ contract ERC20User {
     /*********************/
     /*** Try Functions ***/
     /*********************/
+
     function try_erc20_approve(address token, address spender, uint256 amount) external returns (bool ok) {
         (ok,) = token.call(abi.encodeWithSelector(IERC20.approve.selector, spender, amount));
     }
